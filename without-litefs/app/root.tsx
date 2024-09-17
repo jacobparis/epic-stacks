@@ -17,7 +17,6 @@ import {
 	useMatches,
 	useSubmit,
 } from '@remix-run/react'
-import { withSentry } from '@sentry/remix'
 import { useRef } from 'react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import appleTouchIconAssetUrl from './assets/favicons/apple-touch-icon.png'
@@ -263,7 +262,7 @@ function AppWithProviders() {
 	)
 }
 
-export default withSentry(AppWithProviders)
+export default AppWithProviders
 
 function UserDropdown() {
 	const user = useUser()

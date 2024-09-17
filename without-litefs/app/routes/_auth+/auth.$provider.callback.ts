@@ -6,7 +6,6 @@ import {
 } from '#app/utils/auth.server.ts'
 import { ProviderNameSchema, providerLabels } from '#app/utils/connections.tsx'
 import { prisma } from '#app/utils/db.server.ts'
-import { ensurePrimary } from '#app/utils/litefs.server.ts'
 import { combineHeaders } from '#app/utils/misc.tsx'
 import {
 	normalizeEmail,
@@ -28,10 +27,6 @@ import { prefilledProfileKey, providerIdKey } from './onboarding_.$provider.tsx'
 const destroyRedirectTo = { 'set-cookie': destroyRedirectToHeader }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-	// this loader performs mutations, so we need to make sure we're on the
-	// primary instance to avoid writing to a read-only replica
-	await ensurePrimary()
-
 	const providerName = ProviderNameSchema.parse(params.provider)
 	const redirectTo = getRedirectCookieValue(request)
 	const label = providerLabels[providerName]

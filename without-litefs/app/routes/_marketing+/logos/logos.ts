@@ -1,7 +1,6 @@
 import docker from './docker.svg'
 import eslint from './eslint.svg'
 import fakerJS from './faker.svg'
-import fly from './fly.svg'
 import github from './github.svg'
 import msw from './msw.svg'
 import playwright from './playwright.svg'
@@ -11,7 +10,6 @@ import radixUI from './radix.svg'
 import reactEmail from './react-email.svg'
 import remix from './remix.svg'
 import resend from './resend.svg'
-import sentry from './sentry.svg'
 import shadcnUI from './shadcn-ui.svg'
 import sqlite from './sqlite.svg'
 import tailwind from './tailwind.svg'
@@ -29,13 +27,6 @@ export const logos = [
 		href: 'https://remix.run',
 		column: 1,
 		row: 1,
-	},
-	{
-		src: fly,
-		alt: 'Fly.io',
-		href: 'https://fly.io',
-		column: 1,
-		row: 2,
 	},
 	{
 		src: sqlite,
@@ -162,12 +153,5 @@ export const logos = [
 		href: 'https://eslint.org',
 		column: 5,
 		row: 4,
-	},
-	{
-		src: sentry,
-		alt: 'Sentry',
-		href: 'https://sentry.io',
-		column: 5,
-		row: 5,
 	},
 ]

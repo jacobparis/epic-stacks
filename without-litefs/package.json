@@ -1,11 +1,11 @@
 {
-  "name": "epic-stack-template",
+  "name": "epic-stack-template-without-litefs",
   "private": true,
   "sideEffects": false,
   "license": "MIT",
   "epic-stack": {
-    "head": "a141a242b0016fbfe45235d2df6f86a7d22eb621",
-    "date": "2024-09-16T03:43:38Z"
+    "head": "e632246218b8d39f40806b8060c11b03c0fbbe19",
+    "date": "2024-09-06T17:16:53Z"
   },
   "author": "Kent C. Dodds <me@kentcdodds.com> (https://kentcdodds.com/)",
   "type": "module",

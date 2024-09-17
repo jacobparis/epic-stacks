@@ -16,10 +16,6 @@ const IS_PROD = MODE === 'production'
 const IS_DEV = MODE === 'development'
 const ALLOW_INDEXING = process.env.ALLOW_INDEXING !== 'false'
 
-if (IS_PROD && process.env.SENTRY_DSN) {
-	void import('./utils/monitoring.js').then(({ init }) => init())
-}
-
 const viteDevServer = IS_PROD
 	? undefined
 	: await import('vite').then((vite) =>
@@ -36,7 +32,7 @@ const getHost = (req: { get: (key: string) => string | undefined }) =>
 // fly is our proxy
 app.set('trust proxy', true)
 
-// ensure HTTPS only (X-Forwarded-Proto comes from Fly)
+// ensure HTTPS only (X-Forwarded-Proto comes from a proxy or load balancer)
 app.use((req, res, next) => {
 	if (req.method !== 'GET') return next()
 	const proto = req.get('X-Forwarded-Proto')
@@ -113,7 +109,6 @@ app.use(
 			directives: {
 				'connect-src': [
 					MODE === 'development' ? 'ws:' : null,
-					process.env.SENTRY_DSN ? '*.sentry.io' : null,
 					"'self'",
 				].filter(Boolean),
 				'font-src': ["'self'"],
