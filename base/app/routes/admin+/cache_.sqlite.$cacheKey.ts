@@ -1,12 +1,15 @@
 import { invariantResponse } from '@epic-web/invariant'
 import { type ActionFunctionArgs } from 'react-router'
 import { cache } from '#app/utils/cache.server.ts'
+import { requireUserWithRole } from '#app/utils/permissions.server.ts'
+import { type Route } from './+types/cache_.sqlite.$cacheKey.ts'
 
-export async function loader({ params }: ActionFunctionArgs) {
+export async function loader({ request, params }: Route.LoaderArgs) {
+	await requireUserWithRole(request, 'admin')
 	const { cacheKey } = params
 	invariantResponse(cacheKey, 'Cache key is required')
 	return {
-		value: await cache.get(cacheKey),
+			value: await cache.get(cacheKey),
 	}
 }
 

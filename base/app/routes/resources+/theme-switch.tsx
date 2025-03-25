@@ -17,6 +17,7 @@ import {
 	useRequestInfo,
 } from '#app/utils/request-info.ts'
 import { type Theme, setTheme } from '#app/utils/theme.server.ts'
+import { type Route } from './+types/theme-switch.ts'
 
 const ThemeFormSchema = z.object({
 	theme: z.enum(['system', 'light', 'dark']),
@@ -24,7 +25,7 @@ const ThemeFormSchema = z.object({
 	redirectTo: z.string().optional(),
 })
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData()
 	const submission = parseWithZod(formData, {
 		schema: ThemeFormSchema,

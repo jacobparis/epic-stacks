@@ -1,8 +1,8 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { type ActionFunctionArgs } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
+import { type Route } from './+types/download-user-data.ts'
 
-export async function loader({ request }: ActionFunctionArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	const userId = request.headers.get('X-User-ID')
 	invariantResponse(userId, 'User ID is required')
 

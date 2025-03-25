@@ -1,20 +1,9 @@
-import { type ActionFunctionArgs } from 'react-router'
+import { generateRobotsTxt } from '@nasa-gcn/remix-seo'
+import { getDomainUrl } from '#app/utils/misc.tsx'
+import { type Route } from './+types/robots[.]txt.ts'
 
-export function loader({ request }: ActionFunctionArgs) {
-	const robotText = `
-User-agent: *
-Disallow: /admin/
-Allow: /
-
-Sitemap: ${new URL('/sitemap.xml', request.url)}
-	`.trim()
-
-	return new Response(robotText, {
-		headers: {
-			'Content-Type': 'text/plain',
-			'Cache-Control': `public, max-age=${60 * 10}, s-maxage=${
-				60 * 60 * 24
-			}`,
-		},
-	})
+export function loader({ request }: Route.LoaderArgs) {
+	return generateRobotsTxt([
+		{ type: 'sitemap', value: `${getDomainUrl(request)}/sitemap.xml` },
+	])
 }
