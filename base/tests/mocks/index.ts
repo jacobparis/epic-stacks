@@ -27,3 +27,5 @@ if (process.env.NODE_ENV !== 'test') {
 		server.close()
 	})
 }
+
+export * from './github'

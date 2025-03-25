@@ -1,5 +1,11 @@
-import { useNavigation } from '@remix-run/react'
-import { useEffect, useRef, useState } from 'react'
+import {
+	useEffect,
+	useRef,
+	useState,
+	type ComponentPropsWithoutRef,
+	forwardRef,
+} from 'react'
+import { useNavigation } from 'react-router'
 import { useSpinDelay } from 'spin-delay'
 import { cn } from '#app/utils/misc.tsx'
 import { Icon } from './ui/icon.tsx'
@@ -61,3 +67,19 @@ function EpicProgress() {
 }
 
 export { EpicProgress }
+
+export const Progress = forwardRef<
+	HTMLProgressElement,
+	ComponentPropsWithoutRef<'progress'>
+>(({ className, value, ...props }, ref) => (
+	<progress
+		ref={ref}
+		className={cn(
+			'relative h-2 w-full overflow-hidden rounded-full bg-primary/20',
+			className,
+		)}
+		value={value}
+		{...props}
+	/>
+))
+Progress.displayName = 'Progress'

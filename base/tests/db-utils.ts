@@ -1,10 +1,15 @@
+import { execSync } from 'child_process'
 import fs from 'node:fs'
+import { join } from 'path'
+import { fileURLToPath } from 'url'
 import { faker } from '@faker-js/faker'
 import { type PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { UniqueEnforcer } from 'enforce-unique'
 
 const uniqueUsernameEnforcer = new UniqueEnforcer()
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 export function createUser() {
 	const firstName = faker.person.firstName()
@@ -115,23 +120,17 @@ export async function img({
 	}
 }
 
-export async function cleanupDb(prisma: PrismaClient) {
-	const tables = await prisma.$queryRaw<
-		{ name: string }[]
-	>`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations';`
+export function exec(command: string) {
+	execSync(command, {
+		stdio: 'inherit',
+		cwd: join(__dirname, '../'),
+	})
+}
 
-	try {
-		// Disable FK constraints to avoid relation conflicts during deletion
-		await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = OFF`)
-		await prisma.$transaction([
-			// Delete all rows from each table, preserving table structures
-			...tables.map(({ name }) =>
-				prisma.$executeRawUnsafe(`DELETE from "${name}"`),
-			),
-		])
-	} catch (error) {
-		console.error('Error cleaning up database:', error)
-	} finally {
-		await prisma.$executeRawUnsafe(`PRAGMA foreign_keys = ON`)
-	}
+export function cleanupDb() {
+	exec('npm run db:reset')
+}
+
+export function seedDb() {
+	exec('npm run db:seed')
 }

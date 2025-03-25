@@ -191,3 +191,18 @@ export const handlers: Array<HttpHandler> = [
 		})
 	}),
 ]
+
+export const mockGithubUser = () => ({
+	id: faker.string.uuid(),
+	login: faker.internet.userName(),
+	email: faker.internet.email(),
+	name: faker.person.fullName(),
+	avatar_url: faker.image.avatar(),
+})
+
+export const mockGithubAccessToken = () => faker.string.alphanumeric(40)
+
+export const mockGithubProfile = () => ({
+	...mockGithubUser(),
+	accessToken: mockGithubAccessToken(),
+})

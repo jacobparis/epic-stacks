@@ -1,5 +1,5 @@
 // learn more: https://fly.io/docs/reference/configuration/#services-http_checks
-import { type LoaderFunctionArgs } from '@remix-run/node'
+import { type LoaderFunctionArgs } from 'react-router'
 import { prisma } from '#app/utils/db.server.ts'
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -11,7 +11,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		// and make a HEAD request to ourselves, then we're good.
 		await Promise.all([
 			prisma.user.count(),
-			fetch(`${new URL(request.url).protocol}${host}`, {
+			fetch(`${new URL(request.url).protocol}//${host}`, {
 				method: 'HEAD',
 				headers: { 'X-Healthcheck': 'true' },
 			}).then((r) => {

@@ -17,7 +17,7 @@ async function seed() {
 	console.time(`🌱 Database has been seeded`)
 
 	console.time('🧹 Cleaned up the database...')
-	await cleanupDb(prisma)
+	cleanupDb()
 	console.timeEnd('🧹 Cleaned up the database...')
 
 	console.time('🔑 Created permissions...')
@@ -176,7 +176,7 @@ async function seed() {
 						id: '260366b1',
 						title: 'Not bears',
 						content:
-							"Although you may have heard people call them koala 'bears', these awesome animals aren’t bears at all – they are in fact marsupials. A group of mammals, most marsupials have pouches where their newborns develop.",
+							"Although you may have heard people call them koala 'bears', these awesome animals aren't bears at all – they are in fact marsupials. A group of mammals, most marsupials have pouches where their newborns develop.",
 					},
 					{
 						id: 'bb79cf45',

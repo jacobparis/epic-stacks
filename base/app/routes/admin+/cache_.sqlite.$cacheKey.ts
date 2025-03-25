@@ -1,15 +1,27 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { json, type LoaderFunctionArgs } from '@remix-run/node'
+import { type ActionFunctionArgs } from 'react-router'
 import { cache } from '#app/utils/cache.server.ts'
-import { requireUserWithRole } from '#app/utils/permissions.server.ts'
 
-export async function loader({ request, params }: LoaderFunctionArgs) {
-	await requireUserWithRole(request, 'admin')
-
+export async function loader({ params }: ActionFunctionArgs) {
 	const { cacheKey } = params
-	invariantResponse(cacheKey, 'cacheKey is required')
-	return json({
-		cacheKey,
-		value: cache.get(cacheKey),
-	})
+	invariantResponse(cacheKey, 'Cache key is required')
+	return {
+		value: await cache.get(cacheKey),
+	}
+}
+
+export async function action({ params, request }: ActionFunctionArgs) {
+	const { cacheKey } = params
+	invariantResponse(cacheKey, 'Cache key is required')
+	const formData = await request.formData()
+	const intent = formData.get('intent')
+	switch (intent) {
+		case 'delete': {
+			await cache.delete(cacheKey)
+			return { success: true }
+		}
+		default: {
+			throw new Error(`Unknown intent: ${intent}`)
+		}
+	}
 }

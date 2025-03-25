@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
+import { expect, test } from '@playwright/test'
 import { generateTOTP } from '#app/utils/totp.server.ts'
-import { expect, test } from '#tests/playwright-utils.ts'
 
 test('Users can add 2FA to their account and use it when logging in', async ({
 	page,
@@ -49,4 +49,18 @@ test('Users can add 2FA to their account and use it when logging in', async ({
 	await expect(
 		page.getByRole('link', { name: user.name ?? user.username }),
 	).toBeVisible()
+})
+
+test('2FA flow', async ({ page }) => {
+	await page.goto('/login')
+	await page.getByLabel(/email/i).fill('kody@example.com')
+	await page.getByLabel(/password/i).fill('password123')
+	await page.getByRole('button', { name: /log in/i }).click()
+
+	await expect(page).toHaveURL('/2fa')
+	await page.getByLabel(/code/i).fill('123456')
+	await page.getByRole('button', { name: /confirm/i }).click()
+
+	await expect(page).toHaveURL('/')
+	await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible()
 })

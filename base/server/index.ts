@@ -1,6 +1,5 @@
 import crypto from 'node:crypto'
-import { createRequestHandler } from '@remix-run/express'
-import { type ServerBuild } from '@remix-run/node'
+import { createRequestHandler } from '@react-router/express'
 import { ip as ipAddress } from 'address'
 import chalk from 'chalk'
 import closeWithGrace from 'close-with-grace'
@@ -10,11 +9,14 @@ import rateLimit from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
 import helmet from 'helmet'
 import morgan from 'morgan'
+import { type ServerBuild } from 'react-router'
 
 const MODE = process.env.NODE_ENV ?? 'development'
 const IS_PROD = MODE === 'production'
 const IS_DEV = MODE === 'development'
 const ALLOW_INDEXING = process.env.ALLOW_INDEXING !== 'false'
+const SENTRY_ENABLED = IS_PROD && process.env.SENTRY_DSN
+
 
 const viteDevServer = IS_PROD
 	? undefined
@@ -137,7 +139,7 @@ const maxMultiple =
 	!IS_PROD || process.env.PLAYWRIGHT_TEST_BASE_URL ? 10_000 : 1
 const rateLimitDefault = {
 	windowMs: 60 * 1000,
-	max: 1000 * maxMultiple,
+	limit: 1000 * maxMultiple,
 	standardHeaders: true,
 	legacyHeaders: false,
 	validate: { trustProxy: false },
@@ -153,13 +155,13 @@ const rateLimitDefault = {
 const strongestRateLimit = rateLimit({
 	...rateLimitDefault,
 	windowMs: 60 * 1000,
-	max: 10 * maxMultiple,
+	limit: 10 * maxMultiple,
 })
 
 const strongRateLimit = rateLimit({
 	...rateLimitDefault,
 	windowMs: 60 * 1000,
-	max: 100 * maxMultiple,
+	limit: 100 * maxMultiple,
 })
 
 const generalRateLimit = rateLimit(rateLimitDefault)
@@ -194,9 +196,8 @@ app.use((req, res, next) => {
 async function getBuild() {
 	try {
 		const build = viteDevServer
-			? await viteDevServer.ssrLoadModule('virtual:remix/server-build')
+			? await viteDevServer.ssrLoadModule('virtual:react-router/server-build')
 			: // @ts-expect-error - the file might not exist yet but it will
-				// eslint-disable-next-line import/no-unresolved
 				await import('../build/server/index.js')
 
 		return { build: build as unknown as ServerBuild, error: null }
@@ -271,8 +272,12 @@ ${chalk.bold('Press Ctrl+C to stop')}
 	)
 })
 
-closeWithGrace(async () => {
+closeWithGrace(async ({ err }) => {
 	await new Promise((resolve, reject) => {
 		server.close((e) => (e ? reject(e) : resolve('ok')))
 	})
+	if (err) {
+		console.error(chalk.red(err))
+		console.error(chalk.red(err.stack))
+	}
 })

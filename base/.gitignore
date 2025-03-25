@@ -1,6 +1,8 @@
 node_modules
 .DS_store
 
+.react-router/
+
 /build
 /server-build
 .env
@@ -23,3 +25,30 @@ node_modules
 
 # generated files
 /app/components/ui/icons
+
+# Build output
+build/
+dist/
+
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Testing
+coverage/
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

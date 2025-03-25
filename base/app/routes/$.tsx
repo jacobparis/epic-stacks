@@ -5,7 +5,7 @@
 // ensure the user gets the right status code and we can display a nicer error
 // message for them than the Remix and/or browser default.
 
-import { Link, useLocation } from '@remix-run/react'
+import { Link, useLocation } from 'react-router'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 
@@ -14,9 +14,24 @@ export async function loader() {
 }
 
 export default function NotFound() {
-	// due to the loader, this component will never be rendered, but we'll return
-	// the error boundary just in case.
-	return <ErrorBoundary />
+	const location = useLocation()
+	return (
+		<div className="flex h-full flex-col items-center justify-center gap-6">
+			<div className="flex flex-col items-center gap-3">
+				<h1>404 - Oh no, you found a page that's missing stuff.</h1>
+				<p>
+					<Link to="/" className="text-primary underline">
+						Go back home
+					</Link>
+				</p>
+			</div>
+			<p>
+				<pre className="whitespace-pre-wrap break-all text-body-lg">
+					{location.pathname}
+				</pre>
+			</p>
+		</div>
+	)
 }
 
 export function ErrorBoundary() {

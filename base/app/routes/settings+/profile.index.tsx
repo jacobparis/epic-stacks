@@ -3,11 +3,13 @@ import { getZodConstraint, parseWithZod } from '@conform-to/zod'
 import { invariantResponse } from '@epic-web/invariant'
 import { type SEOHandle } from '@nasa-gcn/remix-seo'
 import {
-	json,
+	data,
 	type LoaderFunctionArgs,
 	type ActionFunctionArgs,
-} from '@remix-run/node'
-import { Link, useFetcher, useLoaderData } from '@remix-run/react'
+	Link,
+	useFetcher,
+	useLoaderData,
+} from 'react-router'
 import { z } from 'zod'
 import { ErrorList, Field } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -64,11 +66,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		where: { userId },
 	})
 
-	return json({
+	return {
 		user,
 		hasPassword: Boolean(password),
 		isTwoFactorEnabled: Boolean(twoFactorVerification),
-	})
+	}
 }
 
 type ProfileActionArgs = {
@@ -194,26 +196,26 @@ async function profileUpdateAction({ userId, formData }: ProfileActionArgs) {
 		}),
 	})
 	if (submission.status !== 'success') {
-		return json(
+		return data(
 			{ result: submission.reply() },
 			{ status: submission.status === 'error' ? 400 : 200 },
 		)
 	}
 
-	const data = submission.value
+	const { username, name } = submission.value
 
 	await prisma.user.update({
 		select: { username: true },
 		where: { id: userId },
 		data: {
-			name: data.name,
-			username: data.username,
+			name: name,
+			username: username,
 		},
 	})
 
-	return json({
+	return {
 		result: submission.reply(),
-	})
+	}
 }
 
 function UpdateProfile() {
@@ -248,81 +250,74 @@ function UpdateProfile() {
 				/>
 				<Field
 					className="col-span-3"
-					labelProps={{ htmlFor: fields.name.id, children: 'Name' }}
+					labelProps={{
+						htmlFor: fields.name.id,
+						children: 'Name',
+					}}
 					inputProps={getInputProps(fields.name, { type: 'text' })}
 					errors={fields.name.errors}
 				/>
-			</div>
-
-			<ErrorList errors={form.errors} id={form.errorId} />
-
-			<div className="mt-8 flex justify-center">
-				<StatusButton
-					type="submit"
-					size="wide"
-					name="intent"
-					value={profileUpdateActionIntent}
-					status={fetcher.state !== 'idle' ? 'pending' : form.status ?? 'idle'}
-				>
-					Save changes
-				</StatusButton>
+				<div className="col-span-6">
+					<ErrorList id={form.errorId} errors={form.errors} />
+				</div>
+				<div className="col-span-6">
+					<StatusButton
+						size="wide"
+						name="intent"
+						value={profileUpdateActionIntent}
+						status={
+							fetcher.state !== 'idle' ? 'pending' : (form.status ?? 'idle')
+						}
+					>
+						Save changes
+					</StatusButton>
+				</div>
 			</div>
 		</fetcher.Form>
 	)
 }
 
 async function signOutOfSessionsAction({ request, userId }: ProfileActionArgs) {
-	const authSession = await authSessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
+	const authSession = await authSessionStorage.getSession()
 	const sessionId = authSession.get(sessionKey)
-	invariantResponse(
-		sessionId,
-		'You must be authenticated to sign out of other sessions',
-	)
+	if (!sessionId) {
+		throw new Error('No session found')
+	}
 	await prisma.session.deleteMany({
 		where: {
 			userId,
 			id: { not: sessionId },
 		},
 	})
-	return json({ status: 'success' } as const)
+	return { status: 'success' } as const
 }
 
 function SignOutOfSessions() {
-	const data = useLoaderData<typeof loader>()
+	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
 	const dc = useDoubleCheck()
 
-	const fetcher = useFetcher<typeof signOutOfSessionsAction>()
-	const otherSessionsCount = data.user._count.sessions - 1
 	return (
-		<div>
-			{otherSessionsCount ? (
-				<fetcher.Form method="POST">
-					<StatusButton
-						{...dc.getButtonProps({
-							type: 'submit',
-							name: 'intent',
-							value: signOutOfSessionsActionIntent,
-						})}
-						variant={dc.doubleCheck ? 'destructive' : 'default'}
-						status={
-							fetcher.state !== 'idle'
-								? 'pending'
-								: fetcher.data?.status ?? 'idle'
-						}
-					>
-						<Icon name="avatar">
-							{dc.doubleCheck
-								? `Are you sure?`
-								: `Sign out of ${otherSessionsCount} other sessions`}
-						</Icon>
-					</StatusButton>
-				</fetcher.Form>
-			) : (
-				<Icon name="avatar">This is your only session</Icon>
-			)}
-		</div>
+		<fetcher.Form method="POST">
+			<input
+				type="hidden"
+				name="intent"
+				value={signOutOfSessionsActionIntent}
+			/>
+			<StatusButton
+				{...dc.getButtonProps({
+					type: 'submit',
+					variant: 'secondary',
+					status:
+						fetcher.state !== 'idle'
+							? 'pending'
+							: (fetcher.data?.status ?? 'idle'),
+				})}
+			>
+				<Icon name="avatar">
+					{dc.doubleCheck ? 'Are you sure?' : 'Sign out of all other sessions'}
+				</Icon>
+			</StatusButton>
+		</fetcher.Form>
 	)
 }
 
@@ -331,31 +326,28 @@ async function deleteDataAction({ userId }: ProfileActionArgs) {
 	return redirectWithToast('/', {
 		type: 'success',
 		title: 'Data Deleted',
-		description: 'All of your data has been deleted',
+		description: 'All of your data has been deleted.',
 	})
 }
 
 function DeleteData() {
+	const fetcher = useFetcher<typeof deleteDataAction>()
 	const dc = useDoubleCheck()
 
-	const fetcher = useFetcher<typeof deleteDataAction>()
 	return (
-		<div>
-			<fetcher.Form method="POST">
-				<StatusButton
-					{...dc.getButtonProps({
-						type: 'submit',
-						name: 'intent',
-						value: deleteDataActionIntent,
-					})}
-					variant={dc.doubleCheck ? 'destructive' : 'default'}
-					status={fetcher.state !== 'idle' ? 'pending' : 'idle'}
-				>
-					<Icon name="trash">
-						{dc.doubleCheck ? `Are you sure?` : `Delete all your data`}
-					</Icon>
-				</StatusButton>
-			</fetcher.Form>
-		</div>
+		<fetcher.Form method="POST">
+			<input type="hidden" name="intent" value={deleteDataActionIntent} />
+			<StatusButton
+				{...dc.getButtonProps({
+					type: 'submit',
+					variant: 'destructive',
+					status: fetcher.state !== 'idle' ? 'pending' : 'idle',
+				})}
+			>
+				<Icon name="trash">
+					{dc.doubleCheck ? 'Are you sure?' : 'Delete all data'}
+				</Icon>
+			</StatusButton>
+		</fetcher.Form>
 	)
 }

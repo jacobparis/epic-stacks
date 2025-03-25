@@ -1,5 +1,5 @@
+import { expect, type MatcherContext, type MatcherState } from '@playwright/test'
 import * as setCookieParser from 'set-cookie-parser'
-import { expect } from 'vitest'
 import { sessionKey } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { authSessionStorage } from '#app/utils/session.server.ts'
@@ -150,6 +150,17 @@ expect.extend({
 				`toast in the response ${
 					this.isNot ? 'does not match' : 'matches'
 				} the expected toast${diff}`,
+		}
+	},
+	async toHaveFocus(
+		this: MatcherContext & MatcherState,
+		received: HTMLElement,
+	) {
+		const hasFocus = document.activeElement === received
+		return {
+			message: () =>
+				`expected ${received} to ${hasFocus ? 'not ' : ''}have focus`,
+			pass: hasFocus,
 		}
 	},
 })
