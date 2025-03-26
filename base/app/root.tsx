@@ -31,6 +31,7 @@ import {
 } from './components/ui/dropdown-menu.tsx'
 import { Icon, href as iconsHref } from './components/ui/icon.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
+import { UserDropdown } from './components/user-dropdown.tsx'
 import {
 	ThemeSwitch,
 	useOptionalTheme,
@@ -87,7 +88,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const user = userId
 		? await time(
 				() =>
-					prisma.user.findUniqueOrThrow({
+					prisma.user.findUnique({
 						select: {
 							id: true,
 							name: true,
@@ -114,7 +115,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		await logout({ request, redirectTo: '/' })
 	}
 	const { toast, headers: toastHeaders } = await getToast(request)
-	const honeyProps = honeypot.getInputProps()
+	const honeyProps = await honeypot.getInputProps()
 
 	return data(
 		{
@@ -268,67 +269,6 @@ function AppWithProviders() {
 }
 
 export default wrapUseRoutesV7(AppWithProviders)
-
-function UserDropdown() {
-	const user = useUser()
-	const submit = useSubmit()
-	const formRef = useRef<HTMLFormElement>(null)
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button asChild variant="secondary">
-					<Link
-						to={`/users/${user.username}`}
-						// this is for progressive enhancement
-						onClick={(e) => e.preventDefault()}
-						className="flex items-center gap-2"
-					>
-						<img
-							className="h-8 w-8 rounded-full object-cover"
-							alt={user.name ?? user.username}
-							src={getUserImgSrc(user.image?.id)}
-						/>
-						<span className="text-body-sm font-bold">
-							{user.name ?? user.username}
-						</span>
-					</Link>
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuPortal>
-				<DropdownMenuContent sideOffset={8} align="start">
-					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to={`/users/${user.username}`}>
-							<Icon className="text-body-md" name="avatar">
-								Profile
-							</Icon>
-						</Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to={`/users/${user.username}/notes`}>
-							<Icon className="text-body-md" name="pencil-2">
-								Notes
-							</Icon>
-						</Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						asChild
-						// this prevents the menu from closing before the form submission is completed
-						onSelect={async (event) => {
-							event.preventDefault()
-							await submit(formRef.current)
-						}}
-					>
-						<Form action="/logout" method="POST" ref={formRef}>
-							<Icon className="text-body-md" name="exit">
-								<button type="submit">Logout</button>
-							</Icon>
-						</Form>
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenuPortal>
-		</DropdownMenu>
-	)
-}
 
 // this is a last resort error boundary. There's not much useful information we
 // can offer at this level.

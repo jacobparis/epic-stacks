@@ -1,5 +1,10 @@
+import prismaInstrumentation from '@prisma/instrumentation'
 import * as Sentry from '@sentry/node'
 import { nodeProfilingIntegration } from '@sentry/profiling-node'
+
+// prisma's exports are wrong...
+// https://github.com/prisma/prisma/issues/23410
+const { PrismaInstrumentation } = prismaInstrumentation
 
 export function init() {
 	Sentry.init({
@@ -17,14 +22,17 @@ export function init() {
 			/\/site\.webmanifest/,
 		],
 		integrations: [
-			Sentry.prismaIntegration(),
+			Sentry.prismaIntegration({
+				prismaInstrumentation: new PrismaInstrumentation(),
+			}),
 			Sentry.httpIntegration(),
 			nodeProfilingIntegration(),
 		],
+		// https://github.com/getsentry/sentry-javascript/issues/12996
+		registerEsmLoaderHooks: { onlyIncludeInstrumentedModules: true },
 		tracesSampler(samplingContext) {
-			// ignore healthcheck transactions:
-			// @ts-expect-error pathname exists even though it's not in the types 🤷‍♂️
-			if (samplingContext?.transactionContext?.pathname?.includes('healthcheck')) {
+			// ignore healthcheck transactions by other services (consul, etc.)
+			if (samplingContext.request?.url?.includes('/resources/healthcheck')) {
 				return 0
 			}
 			return 1

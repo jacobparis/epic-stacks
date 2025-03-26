@@ -1,14 +1,14 @@
 import crypto from 'node:crypto'
+import { styleText } from 'node:util'
+import { helmet } from '@nichtsam/helmet/node-http'
 import { createRequestHandler } from '@react-router/express'
 import * as Sentry from '@sentry/node'
 import { ip as ipAddress } from 'address'
-import chalk from 'chalk'
 import closeWithGrace from 'close-with-grace'
 import compression from 'compression'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import getPort, { portNumbers } from 'get-port'
-import helmet from 'helmet'
 import morgan from 'morgan'
 import { type ServerBuild } from 'react-router'
 
@@ -17,7 +17,6 @@ const IS_PROD = MODE === 'production'
 const IS_DEV = MODE === 'development'
 const ALLOW_INDEXING = process.env.ALLOW_INDEXING !== 'false'
 const SENTRY_ENABLED = IS_PROD && process.env.SENTRY_DSN
-
 
 const viteDevServer = IS_PROD
 	? undefined
@@ -85,7 +84,13 @@ app.get(['/img/*', '/favicons/*'], (_req, res) => {
 	return res.status(404).send('Not found')
 })
 
-morgan.token('url', (req) => decodeURIComponent(req.url ?? ''))
+morgan.token('url', (req) => {
+	try {
+		return decodeURIComponent(req.url ?? '')
+	} catch {
+		return req.url ?? ''
+	}
+})
 app.use(
 	morgan('tiny', {
 		skip: (req, res) =>
@@ -98,40 +103,9 @@ app.use(
 
 app.use((_, res, next) => {
 	res.locals.cspNonce = crypto.randomBytes(16).toString('hex')
+	helmet(res, { general: { referrerPolicy: false } })
 	next()
 })
-
-app.use(
-	helmet({
-		xPoweredBy: false,
-		referrerPolicy: { policy: 'same-origin' },
-		crossOriginEmbedderPolicy: false,
-		contentSecurityPolicy: {
-			// NOTE: Remove reportOnly when you're ready to enforce this CSP
-			reportOnly: true,
-			directives: {
-				'connect-src': [
-					MODE === 'development' ? 'ws:' : null,
-					"'self'",
-				].filter(Boolean),
-				'font-src': ["'self'"],
-				'frame-src': ["'self'"],
-				'img-src': ["'self'", 'data:'],
-				'script-src': [
-					"'strict-dynamic'",
-					"'self'",
-					// @ts-expect-error
-					(_, res) => `'nonce-${res.locals.cspNonce}'`,
-				],
-				'script-src-attr': [
-					// @ts-expect-error
-					(_, res) => `'nonce-${res.locals.cspNonce}'`,
-				],
-				'upgrade-insecure-requests': null,
-			},
-		},
-	}),
-)
 
 // When running tests or running in development, we want to effectively disable
 // rate limiting because playwright tests are very fast and we don't want to
@@ -144,7 +118,7 @@ const rateLimitDefault = {
 	standardHeaders: true,
 	legacyHeaders: false,
 	validate: { trustProxy: false },
-	// Malicious users can spoof their IP address which means we should not deault
+	// Malicious users can spoof their IP address which means we should not default
 	// to trusting req.ip when hosted on Fly.io. However, users cannot spoof Fly-Client-Ip.
 	// When sitting behind a CDN such as cloudflare, replace fly-client-ip with the CDN
 	// specific header such as cf-connecting-ip
@@ -248,27 +222,27 @@ if (!portAvailable && !IS_DEV) {
 const server = app.listen(portToUse, () => {
 	if (!portAvailable) {
 		console.warn(
-			chalk.yellow(
-				`⚠️  Port ${desiredPort} is not available, using ${portToUse} instead.`,
-			),
+			styleText('yellow', `⚠️  Port ${desiredPort} is not available, using ${portToUse} instead.`),
 		)
 	}
 	console.log(`🚀  We have liftoff!`)
+
 	const localUrl = `http://localhost:${portToUse}`
 	let lanUrl: string | null = null
-	const localIp = ipAddress() ?? 'Unknown'
-	// Check if the address is a private ip
-	// https://en.wikipedia.org/wiki/Private_network#Private_IPv4_address_spaces
-	// https://github.com/facebook/create-react-app/blob/d960b9e38c062584ff6cfb1a70e1512509a966e7/packages/react-dev-utils/WebpackDevServerUtils.js#LL48C9-L54C10
-	if (/^10[.]|^172[.](1[6-9]|2[0-9]|3[0-1])[.]|^192[.]168[.]/.test(localIp)) {
-		lanUrl = `http://${localIp}:${portToUse}`
+
+	// Local, unprivileged users cannot access the loopback interface without
+	// specifying the hostname, so we'll only display the LAN URL when there is an
+	// interface for the port.
+	// https://nodejs.org/api/net.html#net_server_listen
+	if (ipAddress()) {
+		lanUrl = `http://${ipAddress()}:${portToUse}`
 	}
 
 	console.log(
 		`
-${chalk.bold('Local:')}            ${chalk.cyan(localUrl)}
-${lanUrl ? `${chalk.bold('On Your Network:')}  ${chalk.cyan(lanUrl)}` : ''}
-${chalk.bold('Press Ctrl+C to stop')}
+${styleText('bold', 'Local:')}            ${styleText('cyan', localUrl)}
+${lanUrl ? `${styleText('bold', 'On Your Network:')}  ${styleText('cyan', lanUrl)}` : ''}
+${styleText('bold', 'Press Ctrl+C to stop')}
 		`.trim(),
 	)
 })
@@ -278,7 +252,11 @@ closeWithGrace(async ({ err }) => {
 		server.close((e) => (e ? reject(e) : resolve('ok')))
 	})
 	if (err) {
-		console.error(chalk.red(err))
-		console.error(chalk.red(err.stack))
+		console.error(styleText('red', String(err)))
+		console.error(styleText('red', String(err.stack)))
+		if (SENTRY_ENABLED) {
+			Sentry.captureException(err)
+			await Sentry.flush(500)
+		}
 	}
 })

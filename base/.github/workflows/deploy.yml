@@ -23,9 +23,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -41,9 +41,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -59,9 +59,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -81,9 +81,9 @@ jobs:
         run: cp .env.example .env
 
       - name: ⎔ Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1

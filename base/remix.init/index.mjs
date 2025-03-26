@@ -3,9 +3,30 @@ import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
+const escapeRegExp = (string) =>
+	string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const getRandomString = (length) => crypto.randomBytes(length).toString('hex')
+const getRandomString32 = () => getRandomString(32)
+
+async function getEpicStackVersion() {
+	const response = await fetch(
+		'https://api.github.com/repos/epicweb-dev/epic-stack/commits/main',
+	)
+	if (!response.ok) {
+		throw new Error(
+			`Failed to fetch Epic Stack version: ${response.status} ${response.statusText}`,
+		)
+	}
+	const data = await response.json()
+	return {
+		head: data.sha,
+		date: data.commit.author.date,
+	}
+}
 
 export default async function main({ rootDirectory }) {
+	const FLY_TOML_PATH = path.join(rootDirectory, 'fly.toml')
 	const EXAMPLE_ENV_PATH = path.join(rootDirectory, '.env.example')
 	const ENV_PATH = path.join(rootDirectory, '.env')
 	const PKG_PATH = path.join(rootDirectory, 'package.json')
@@ -34,7 +55,19 @@ export default async function main({ rootDirectory }) {
 	delete packageJson.author
 	delete packageJson.license
 
+	// Add Epic Stack version information
+	try {
+		const epicStackVersion = await getEpicStackVersion()
+		packageJson['epic-stack'] = epicStackVersion
+	} catch (error) {
+		console.warn(
+			'Failed to fetch Epic Stack version information. The package.json will not include version details.',
+			error,
+		)
+	}
+
 	const fileOperationPromises = [
+		fs.writeFile(FLY_TOML_PATH, newFlyTomlContent),
 		fs.writeFile(ENV_PATH, newEnv),
 		fs.writeFile(PKG_PATH, JSON.stringify(packageJson, null, 2)),
 		fs.copyFile(
@@ -69,6 +102,63 @@ What's next?
 
 - Start development with \`npm run dev\`
 - Run tests with \`npm run test\` and \`npm run test:e2e\`
+		`.trim(),
+	)
+}
+
+async function setupDeployment({ rootDirectory }) {
+	const APP_NAME = path.basename(rootDirectory)
+	const primaryRegion = 'lhr'
+
+	console.log(`🚀 Setting up deployment for ${APP_NAME}`)
+
+	// create apps
+	console.log(`📦 Creating apps`)
+	await $I`fly apps create ${APP_NAME}-staging --org epic-web`
+	await $I`fly apps create ${APP_NAME} --org epic-web`
+
+	// create secrets
+	console.log(`🔑 Creating secrets`)
+	await $I`fly secrets set SESSION_SECRET=${getRandomString32()} INTERNAL_COMMAND_TOKEN=${getRandomString32()} HONEYPOT_SECRET=${getRandomString32()} ALLOW_INDEXING=false --app ${APP_NAME}-staging`
+	await $I`fly secrets set SESSION_SECRET=${getRandomString32()} INTERNAL_COMMAND_TOKEN=${getRandomString32()} HONEYPOT_SECRET=${getRandomString32()} --app ${APP_NAME}`
+
+	console.log(`🔊 Creating volumes.`)
+	await $I`fly volumes create data --region ${primaryRegion} --size 1 --yes --app ${APP_NAME}-staging`
+	await $I`fly volumes create data --region ${primaryRegion} --size 1 --yes --app ${APP_NAME}`
+
+	// attach consul
+	console.log(`🔗 Attaching consul`)
+	await $I`fly consul attach --app ${APP_NAME}-staging`
+	await $I`fly consul attach --app ${APP_NAME}`
+
+	console.log(`🗄️ Setting up Tigris object storage`)
+	await $I`fly storage create --yes --app ${APP_NAME}-staging`
+	await $I`fly storage create --yes --app ${APP_NAME}`
+
+	const { shouldDeploy } = await inquirer.prompt([
+		{
+			name: 'shouldDeploy',
+			type: 'confirm',
+			message: 'Would you like to deploy now?',
+			default: true,
+		},
+	])
+
+	if (shouldDeploy) {
+		console.log(`🚀 Deploying`)
+		await $I`fly deploy --app ${APP_NAME}-staging`
+		await $I`fly deploy --app ${APP_NAME}`
+	}
+
+	console.log(
+		`
+Deployment setup is complete. You're now ready to deploy 🚀
+
+What's next?
+
+- Deploy with \`fly deploy\`
+- Monitor your app with \`fly status\`
+- View logs with \`fly logs\`
 		`.trim(),
 	)
 }
